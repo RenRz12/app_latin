@@ -2,6 +2,7 @@ import {
   allowedExerciseTypes,
   allowedTopics,
   allowedVocabularyLevels,
+  topicCatalog,
   vocabularyScopesByLevel,
 } from "../data/exerciseCatalog.js";
 import {
@@ -75,6 +76,7 @@ function serializeExercise(exercise) {
   return {
     id: exercise.id,
     topic: exercise.topic,
+    topicLabel: topicCatalog[exercise.topic].label,
     vocabularyLevel: exercise.vocabularyLevel,
     vocabularyScope: vocabularyScopesByLevel[exercise.vocabularyLevel],
     exerciseType: exercise.exerciseType,
@@ -94,6 +96,7 @@ export async function generateExercise(params) {
 
   const generatedExercise = await generateExerciseWithAi({
     ...normalizedParams,
+    topicLabel: topicCatalog[normalizedParams.topic].promptLabel,
     vocabularyScope: vocabularyScopesByLevel[normalizedParams.vocabularyLevel],
   });
 
@@ -111,9 +114,11 @@ export function createManualPrompt(params) {
 
   return {
     ...normalizedParams,
+    topicLabel: topicCatalog[normalizedParams.topic].label,
     vocabularyScope: vocabularyScopesByLevel[normalizedParams.vocabularyLevel],
     prompt: buildManualExercisePrompt({
       ...normalizedParams,
+      topicLabel: topicCatalog[normalizedParams.topic].promptLabel,
       vocabularyScope: vocabularyScopesByLevel[normalizedParams.vocabularyLevel],
     }),
   };

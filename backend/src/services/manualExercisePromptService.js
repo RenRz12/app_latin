@@ -63,6 +63,7 @@ function getRulesByExerciseType(exerciseType) {
 
 export function buildManualExercisePrompt({
   topic,
+  topicLabel,
   vocabularyLevel,
   exerciseType,
   vocabularyScope,
@@ -86,7 +87,7 @@ export function buildManualExercisePrompt({
     'Quiero crear ejercicios de latin para una app educativa.',
     '',
     'Genera 20 ejercicios con estas condiciones:',
-    `- Tema gramatical: ${topic}`,
+    `- Tema gramatical: ${topicLabel || topic}`,
     `- Tipo de ejercicio: ${exerciseType}`,
     `- Libro de referencia: ${vocabularyScope.book}`,
     `- Alcance de vocabulario: capitulos ${vocabularyScope.fromChapter} al ${vocabularyScope.toChapter}`,

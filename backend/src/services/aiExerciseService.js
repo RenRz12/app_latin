@@ -64,11 +64,11 @@ function getRulesByExerciseType(exerciseType) {
   return rules[exerciseType] || rules.multiple_choice
 }
 
-function buildPrompt({ topic, vocabularyLevel, exerciseType, vocabularyScope }) {
+function buildPrompt({ topic, topicLabel, vocabularyLevel, exerciseType, vocabularyScope }) {
   return [
     'Genera un ejercicio de latin para una app educativa.',
     '',
-    `Tema gramatical: ${topic}`,
+    `Tema gramatical: ${topicLabel || topic}`,
     `Nivel de vocabulario interno: ${vocabularyLevel}`,
     `Referencia de vocabulario: ${vocabularyScope.book}`,
     `Alcance permitido: capitulos ${vocabularyScope.fromChapter} al ${vocabularyScope.toChapter}`,
