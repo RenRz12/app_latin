@@ -4,6 +4,12 @@ export async function createExercise(exerciseData) {
   return Exercise.create(exerciseData)
 }
 
+export async function createExercises(exercisesData) {
+  return Exercise.bulkCreate(exercisesData, {
+    returning: true,
+  })
+}
+
 export async function findRecentExercises(limit = 20) {
   return Exercise.findAll({
     order: [['createdAt', 'DESC']],

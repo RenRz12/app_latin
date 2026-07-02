@@ -110,17 +110,18 @@ button:focus-visible {
 
 .level-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
 .level-button {
-  min-height: 44px;
+  min-height: 48px;
   border: 1px solid var(--border);
   border-radius: 7px;
   color: var(--text-h);
   background: var(--bg);
   font: inherit;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
 }
@@ -156,6 +157,25 @@ button:focus-visible {
 .secondary-action:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.button-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.full-width {
+  width: 100%;
+  justify-content: center;
+}
+
+.status-message {
+  border-radius: 7px;
+  padding: 12px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .exercise-panel {
@@ -235,6 +255,41 @@ button:focus-visible {
   padding: 28px 0 0;
 }
 
+.manual-workspace {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  border-top: 1px solid var(--border);
+  padding: 28px 0;
+}
+
+.manual-panel {
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 22px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+textarea {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 14px;
+  color: var(--text-h);
+  background: var(--bg);
+  font: 14px/1.5 var(--mono);
+}
+
+textarea:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
 pre {
   overflow-x: auto;
   margin: 0;
@@ -255,6 +310,7 @@ pre {
 
   .intro-section,
   .workspace,
+  .manual-workspace,
   .api-preview {
     grid-template-columns: 1fr;
   }
