@@ -1,0 +1,36 @@
+{
+ "name": "backend",
+ "version": "1.0.0",
+ "description": "Backend de la aplicacion de latin",
+ "type": "module",
+ "main": "src/app.js",
+ "scripts": {
+  "start": "node src/app.js",
+  "dev": "node --watch src/app.js",
+  "db:sync": "node src/database/sync.js",
+  "lint": "eslint .",
+  "lint:fix": "eslint . --fix",
+  "format": "prettier . --write"
+ },
+ "keywords": [
+  "node",
+  "express",
+  "api",
+  "backend",
+  "tareas"
+ ],
+ "author": "",
+ "license": "ISC",
+ "dependencies": {
+  "cors": "^2.8.6",
+  "dotenv": "^17.4.2",
+  "express": "^5.2.1",
+  "sequelize": "^6.37.8",
+  "sqlite3": "^5.1.7"
+ },
+ "devDependencies": {
+  "eslint": "^10.6.0",
+  "eslint-config-prettier": "^10.1.8",
+  "prettier": "^3.9.4"
+ }
+}
