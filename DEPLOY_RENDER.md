@@ -21,6 +21,21 @@ instancia del servidor.
    `SESSION_SECRET` se genera automáticamente y no debes compartirlo.
 5. Aplica el Blueprint y espera a que `/api/health` indique que el servicio está disponible.
 
+Si creaste el servicio manualmente en vez de usar **New > Blueprint**, revisa estos valores
+en **Settings > Build & Deploy**:
+
+```text
+Service Type: Web Service
+Runtime: Node
+Root Directory: vacío
+Build Command: npm run render-build
+Start Command: npm start
+Health Check Path: /api/health
+```
+
+No configures `frontend` ni `backend` como Root Directory: el despliegue necesita ambos y
+los comandos se ejecutan desde la raíz del repositorio.
+
 La primera ejecución crea la base y carga automáticamente las 1.729 entradas de vocabulario
 incluidas en `backend/seed/familia-romana-vocabulary.json`.
 

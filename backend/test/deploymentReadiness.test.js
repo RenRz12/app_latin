@@ -44,8 +44,15 @@ test('el despliegue incluye una semilla completa de Familia Romana', async () =>
 
 test('el Blueprint conserva SQLite en el disco y protege la aplicación', async () => {
   const blueprint = await readFile(new URL('../../render.yaml', import.meta.url), 'utf8')
+  const rootPackage = JSON.parse(
+    await readFile(new URL('../../package.json', import.meta.url), 'utf8'),
+  )
+  assert.match(blueprint, /buildCommand: npm run render-build/)
+  assert.match(blueprint, /startCommand: npm start/)
   assert.match(blueprint, /healthCheckPath: \/api\/health/)
   assert.match(blueprint, /DATABASE_STORAGE[\s\S]*\/var\/data\/app-latin\.sqlite/)
   assert.match(blueprint, /APP_PASSWORD[\s\S]*sync: false/)
   assert.match(blueprint, /mountPath: \/var\/data/)
+  assert.match(rootPackage.scripts['render-build'], /backend install/)
+  assert.equal(rootPackage.scripts.start, 'npm --prefix backend start')
 })
