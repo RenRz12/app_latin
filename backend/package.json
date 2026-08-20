@@ -8,6 +8,13 @@
   "start": "node src/app.js",
   "dev": "node --watch src/app.js",
   "db:sync": "node src/database/sync.js",
+  "vocabulary:dry-run": "node scripts/importFamiliaRomanaVocabulary.js --dry-run",
+  "vocabulary:import": "node scripts/importFamiliaRomanaVocabulary.js",
+  "vocabulary:backfill": "node scripts/backfillLegacyVocabularyProgress.js",
+  "vocabulary:export-seed": "node scripts/exportVocabularySeed.js",
+  "adaptive:demo": "node scripts/simulateAdaptiveSession.js",
+  "adaptive:profiles": "node scripts/simulateVocabularyProfiles.js",
+  "test": "node --test --test-concurrency=1 test/*.test.js",
   "lint": "eslint .",
   "lint:fix": "eslint . --fix",
   "format": "prettier . --write"

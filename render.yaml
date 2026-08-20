@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: app-latin
+    runtime: node
+    plan: starter
+    buildCommand: npm --prefix backend ci && npm --prefix frontend ci && npm --prefix frontend run build
+    startCommand: npm --prefix backend start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
+      - key: DATABASE_STORAGE
+        value: /var/data/app-latin.sqlite
+      - key: APP_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SESSION_DURATION_DAYS
+        value: 30
+      - key: AI_PROVIDER
+        value: mock
+      - key: AI_MODEL
+        value: gpt-5.5
+      - key: AI_FALLBACK_TO_MOCK
+        value: true
+    disk:
+      name: app-latin-data
+      mountPath: /var/data
+      sizeGB: 1

@@ -1,5 +1,8 @@
 node_modules/
 data/
+reports/
+__pycache__/
+*.pyc
 .env
 .DS_Store
 npm-debug.log*

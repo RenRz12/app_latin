@@ -23,9 +23,9 @@ export async function getExercises(_request, response, next) {
   }
 }
 
-export function createExercisePrompt(request, response, next) {
+export async function createExercisePrompt(request, response, next) {
   try {
-    const prompt = createManualPrompt(request.body)
+    const prompt = await createManualPrompt(request.body)
     response.json(prompt)
   } catch (error) {
     next(error)

@@ -1,5 +1,10 @@
 # Backend App Latin
 
+> Para publicar la aplicación completa en Render, consulta
+> [`../DEPLOY_RENDER.md`](../DEPLOY_RENDER.md). El despliegue recomendado sirve el frontend y
+> la API desde un mismo servicio, protege el acceso con contraseña y conserva SQLite en un
+> disco persistente.
+
 API en Express para generar y guardar ejercicios de latin. Por ahora usa ejercicios de prueba; la idea es que el mismo flujo pueda conectarse despues a una IA sin cambiar el contrato con el frontend.
 
 ## Idea del flujo
@@ -242,12 +247,13 @@ Respuesta:
 }
 ```
 
-Ese `prompt` se copia y se pega en ChatGPT. El prompt pide 20 ejercicios para economizar el uso manual de la IA y funciona para `multiple_choice`, `fill_blank` y `translation`. ChatGPT debe devolver JSON con este formato:
+Ese `prompt` se copia y se pega en ChatGPT. El prompt pide 20 ejercicios para economizar el uso manual de la IA y funciona para `multiple_choice`, `fill_blank`, `conjugation`, `transformation`, `translation_la_es` y `translation_es_la`. ChatGPT debe devolver JSON con este formato:
 
 ```json
 {
   "exercises": [
     {
+      "exerciseType": "multiple_choice",
       "prompt": "Elegi la forma correcta del verbo.",
       "question": "Puella rosam ____.",
       "options": ["amat", "amavit", "amabit", "amabant"],
@@ -331,5 +337,172 @@ Niveles de vocabulario:
 Tipos de ejercicio:
 
 ```text
-multiple_choice, fill_blank, translation
+multiple_choice
+fill_blank
+conjugation
+transformation
+translation_la_es
+translation_es_la
 ```
+
+## Vocabulario adaptativo de Familia Romana
+
+El vocabulario canónico se extrae del `INDEX VOCABVLORVM` de *Familia Romana*. La tabla
+`vocabulary` conserva un registro por lema y `vocabulary_chapters` lo relaciona con todos
+los capítulos en los que aparece. Las traducciones españolas quedan vacías si no existe
+una fuente verificable y las lecturas dudosas de la capa de texto del PDF se registran en
+`reports/vocabulary-import-report.json`.
+
+La lectura y el aprendizaje se almacenan por separado:
+
+- `reading_progress` indica hasta qué capítulo llegó el usuario.
+- `user_vocabulary_progress` mantiene etapa, scores independientes e intervalo de repaso.
+- `vocabulary_review_events` conserva el historial de intentos sin sobrescribirlo.
+
+Antes de importar, sincronizá el esquema y ejecutá una simulación:
+
+```powershell
+npm run db:sync
+npm run vocabulary:dry-run -- --pdf "C:\ruta\Familia Romana.pdf" --python "C:\ruta\python.exe"
+```
+
+Si la simulación representa los capítulos I–XXXV, importá y comprobá la idempotencia
+repitiendo el mismo comando:
+
+```powershell
+npm run vocabulary:import -- --pdf "C:\ruta\Familia Romana.pdf" --python "C:\ruta\python.exe"
+npm run vocabulary:import -- --pdf "C:\ruta\Familia Romana.pdf" --python "C:\ruta\python.exe"
+npm test
+```
+
+También se pueden definir `FAMILIA_ROMANA_PDF` y `PYTHON_BIN` para omitir esos argumentos.
+El extractor requiere Python con `pdfplumber`.
+
+Endpoints disponibles:
+
+```text
+GET  /api/vocabulary?chapterFrom=1&chapterTo=10
+GET  /api/vocabulary/progress?userId=1&dueOnly=true
+POST /api/vocabulary/:vocabularyId/reviews
+GET  /api/vocabulary/users/:userId/reading-progress
+PUT  /api/vocabulary/users/:userId/reading-progress
+```
+
+Ejemplo de repaso:
+
+```json
+{
+  "userId": 1,
+  "reviewType": "GUIDED_RECALL",
+  "result": "CORRECT",
+  "responseTimeMs": 3200
+}
+```
+
+El servicio actualiza únicamente el score correspondiente a `reviewType`, guarda el evento
+y calcula `nextReviewAt`. Un error acorta el intervalo y suma un lapso; solo una secuencia de
+errores puede bajar una etapa. `MASTERED` exige varios éxitos y al menos siete días entre el
+primer contacto y la evaluación que lo concede.
+
+## Motor adaptativo de repaso
+
+Una sesión adaptativa se construye en tres pasos independientes:
+
+1. `reviewSchedulerService` selecciona palabras y calcula su prioridad.
+2. `exercisePlannerService` asigna la habilidad y los focos gramaticales.
+3. `exercisePromptBuilderService` produce un pedido estructurado y un prompt restrictivo.
+4. `vocabularyExercisePolicyService` aplica evidencia ponderada solamente a las habilidades
+   que el formato evaluó.
+
+El planificador puede elegir entre diez formatos: opción múltiple léxica, significado en
+contexto, traducción latín-español, traducción español-latín, completar flexión, opción
+múltiple morfológica, recuperación guiada, identificación de lema, producción morfológica y
+producción libre. `getWeakestVocabularySkill` y `selectVocabularyExerciseType` concentran la
+decisión; los controladores no contienen reglas curriculares.
+
+La distribución normal es 40 % vencidas, 30 % backlog, 20 % del capítulo actual o anterior
+y 10 % mantenimiento. Si faltan candidatos en un grupo, los lugares se redistribuyen. Hasta
+un 15 % de la sesión puede ser desplazado por palabras cuya prioridad supere en 25 puntos a
+un objetivo menos urgente.
+
+La prioridad suma de forma determinista:
+
+- bucket y etapa actual;
+- días de atraso;
+- déficit de reconocimiento, producción y morfología;
+- diferencia entre reconocimiento y producción;
+- lapsos, errores y aciertos recientes;
+- racha, tiempo desde el último repaso y cercanía al capítulo leído;
+- frecuencia aproximada en el índice y cantidad de capítulos asociados.
+
+Todas las constantes están en `src/config/adaptiveReviewConfig.js`.
+
+Endpoints:
+
+```text
+POST /api/practice-sessions/adaptive
+GET  /api/practice-sessions/adaptive/:sessionId
+POST /api/practice-sessions/adaptive/:sessionId/prompt
+POST /api/practice-sessions/adaptive/:sessionId/generate
+POST /api/practice-sessions/adaptive/:sessionId/import
+POST /api/practice-sessions/adaptive/exercises/:exerciseId/answer
+GET  /api/vocabulary/due?userId=1
+GET  /api/vocabulary/metrics?userId=1
+```
+
+Crear una sesión normal:
+
+```json
+{
+  "userId": 1,
+  "sessionSize": 20,
+  "mode": "NORMAL"
+}
+```
+
+Para revisar rápidamente palabras nunca practicadas de capítulos ya leídos se puede usar
+`"mode": "BACKLOG_SCREENING"`. Dos aciertos de screening pueden acelerar una palabra hasta
+`CONTEXT_RECOGNITION`, pero nunca hasta `MASTERED`.
+
+El endpoint `prompt` conserva el flujo manual con otra IA. `import` acepta el JSON generado,
+lo valida contra los IDs, habilidades, focos gramaticales y vocabulario permitidos, y recién
+entonces guarda los ejercicios. `generate` utiliza el proveedor configurado o el generador
+local de desarrollo. Ninguno de esos pasos modifica el progreso.
+
+Solo `answer` crea `VocabularyReviewEvent` y actualiza los scores realmente evaluados. Los
+pesos principales configurados son 1.0 para opción múltiple, 1.2 para contexto, 1.3 para
+latín-español y opción morfológica, 1.6 para recuperación guiada, 1.7 para completar flexión,
+2.0 para español-latín y producción morfológica, y 2.3 para producción libre. Los efectos
+secundarios son menores y están declarados en la misma configuración.
+
+El evento conserva tipo de ejercicio, habilidades evaluadas, errores tipificados, scores
+anteriores y resultantes, peso, etapa anterior/resultante y tiempo de respuesta. Los macrones
+se muestran siempre que existen; omitirlos se acepta salvo que la cantidad vocálica sea el
+objetivo explícito. Los acentos agudos representan vocales largas.
+
+Las prácticas de vocabulario del flujo manual también quedan conectadas con este progreso.
+Al importar o generar un ejercicio, el backend resuelve su lema y guarda
+`targetVocabularyIds`. Cuando la práctica se guarda, cada respuesta contestada crea un evento
+idempotente: latín a español actualiza reconocimiento y español a latín actualiza producción.
+Esto funciona tanto en sesiones terminadas como en borradores guardados.
+
+Al iniciar el backend se recuperan automáticamente las prácticas antiguas que conservan sus
+respuestas individuales. También puede ejecutarse manualmente, sin duplicar eventos:
+
+```powershell
+npm run vocabulary:backfill
+```
+
+Una sesión que solo conserve el acierto total no se atribuye a palabras concretas, porque no
+existe evidencia suficiente para saber cuáles fueron acertadas.
+
+Para ejecutar una demostración reproducible en una base temporal:
+
+```powershell
+npm run adaptive:demo
+npm run adaptive:profiles
+```
+
+Los resultados quedan en `reports/adaptive-session-example.json` y
+`reports/adaptive-vocabulary-profiles.json`. El segundo cubre cinco usuarios: producción
+débil, morfología débil, palabra nueva, MASTERED vencida y errores recientes repetidos.

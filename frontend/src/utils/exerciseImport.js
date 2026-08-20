@@ -13,6 +13,12 @@ export function readExercisesFromPastedJson(text) {
 }
 
 export function inferExerciseTypeFromExercises(exercises, fallbackType) {
+  const explicitType = exercises.find((exercise) => exercise.exerciseType)?.exerciseType
+
+  if (explicitType) {
+    return explicitType
+  }
+
   if (exercises.some((exercise) => Array.isArray(exercise.options) && exercise.options.length > 0)) {
     return 'multiple_choice'
   }

@@ -5,20 +5,24 @@ function getAnswerOptionClass(option, selectedAnswer, evaluation) {
     classes.push('selected')
 
     if (evaluation?.status) {
-      classes.push(evaluation.status)
+      classes.push(getVisualStatus(evaluation.status))
     }
   }
 
   return classes.join(' ')
 }
 
-function getFeedbackClass(evaluation, selectedAnswer) {
-  if (!selectedAnswer) return 'feedback revealed'
-  return `feedback ${evaluation?.status || 'revealed'}`
+function getFeedbackClass(evaluation) {
+  return `feedback ${getVisualStatus(evaluation?.status)}`
 }
 
-function getFeedbackTitle(evaluation, selectedAnswer, correctAnswer) {
-  if (!selectedAnswer) return `Respuesta: ${correctAnswer}`
+function getVisualStatus(status) {
+  const normalized = String(status || 'revealed').toLowerCase()
+  if (normalized === 'partial') return 'almost'
+  return normalized
+}
+
+function getFeedbackTitle(evaluation) {
   return evaluation?.label || 'Respuesta'
 }
 
@@ -32,30 +36,65 @@ export function ExerciseCard({
   totalExercises,
   canGoPrevious,
   canGoNext,
+  isLastExercise,
+  canFinish = true,
   onAnswerSelect,
   onTextAnswerChange,
   onTextAnswerSubmit,
-  onRevealAnswer,
   onPreviousExercise,
   onNextExercise,
+  onFinishSession,
 }) {
-  const isMultipleChoice = exerciseType === 'multiple_choice'
-  const feedbackTitle = getFeedbackTitle(evaluation, selectedAnswer, exercise.correctAnswer)
+  const isMultipleChoice = [
+    'multiple_choice',
+    'VOCABULARY_MULTIPLE_CHOICE',
+    'INFLECTION_MULTIPLE_CHOICE',
+  ].includes(exerciseType)
+  const feedbackTitle = getFeedbackTitle(evaluation)
+
+  function goToNextExercise() {
+    if (isLastExercise) {
+      onFinishSession()
+      return
+    }
+
+    onNextExercise()
+  }
+
+  function handleKeyboardNavigation(event) {
+    if (event.key !== 'Enter' || event.repeat || event.altKey || event.ctrlKey || event.metaKey) {
+      return
+    }
+
+    if (showFeedback) {
+      event.preventDefault()
+      event.stopPropagation()
+      goToNextExercise()
+      return
+    }
+
+    if (!isMultipleChoice && selectedAnswer.trim()) {
+      event.preventDefault()
+      onTextAnswerSubmit()
+    }
+  }
 
   return (
-    <section className="exercise-panel" aria-labelledby="exercise-title">
-      <div className="exercise-header">
-        <div>
-          <p className="eyebrow">Ejercicio actual</p>
-          <h2 id="exercise-title">{exercise.prompt}</h2>
-        </div>
-        <span className="difficulty-pill">{exercise.source}</span>
-      </div>
-
-      <div className="exercise-progress">
+    <section
+      className="exercise-panel"
+      aria-labelledby="exercise-title"
+      onKeyDownCapture={handleKeyboardNavigation}
+    >
+      <p className="exercise-kicker">
         Pregunta {currentIndex + 1} de {totalExercises}
-      </div>
+      </p>
 
+      <h2 id="exercise-title" className="sr-only">
+        Ejercicio
+      </h2>
+      {exercise.prompt && (
+        <p className="exercise-instruction">{exercise.prompt}</p>
+      )}
       <div className="latin-sentence">{exercise.question}</div>
 
       {isMultipleChoice ? (
@@ -79,22 +118,18 @@ export function ExerciseCard({
             type="text"
             value={selectedAnswer}
             onChange={(event) => onTextAnswerChange(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                onTextAnswerSubmit()
-              }
-            }}
             placeholder={
-              exerciseType === 'translation'
-                ? 'Escribi tu traduccion'
-                : 'Escribi la palabra que falta'
+              ['translation_la_es', 'translation_es_la', 'TRANSLATION_LA_ES',
+                'TRANSLATION_ES_LA'].includes(exerciseType)
+                ? 'Escribí tu traducción'
+                : 'Escribí tu respuesta'
             }
           />
         </div>
       )}
 
-      <div className="exercise-actions">
-        {!isMultipleChoice && (
+      {!isMultipleChoice && (
+        <div className="exercise-actions">
           <button
             className="secondary-action"
             type="button"
@@ -103,15 +138,15 @@ export function ExerciseCard({
           >
             Revisar respuesta
           </button>
-        )}
-        <button className="secondary-action" type="button" onClick={onRevealAnswer}>
-          Ver respuesta
-        </button>
-      </div>
+        </div>
+      )}
 
       {showFeedback && (
-        <div className={getFeedbackClass(evaluation, selectedAnswer)} role="status">
+        <div className={getFeedbackClass(evaluation)} role="status">
           <strong>{feedbackTitle}</strong>
+          <p>
+            <b>Respuesta correcta:</b> {exercise.correctAnswer}
+          </p>
           <p>{exercise.explanation}</p>
         </div>
       )}
@@ -128,10 +163,10 @@ export function ExerciseCard({
         <button
           className="primary-action"
           type="button"
-          disabled={!canGoNext}
-          onClick={onNextExercise}
+          disabled={isLastExercise ? !canFinish : !canGoNext}
+          onClick={goToNextExercise}
         >
-          Siguiente
+          {isLastExercise ? 'Finalizar' : 'Siguiente'}
         </button>
       </div>
     </section>

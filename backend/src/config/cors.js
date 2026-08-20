@@ -11,6 +11,7 @@ const defaultClientOrigins = [
 const allowedOrigins = [...new Set([...defaultClientOrigins, ...env.clientOrigins])]
 
 export const corsMiddleware = cors({
+  credentials: true,
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true)

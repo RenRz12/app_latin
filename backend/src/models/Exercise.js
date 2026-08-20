@@ -17,6 +17,16 @@ export const Exercise = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    vocabularyChapterFrom: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+    },
+    vocabularyChapterTo: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 5,
+    },
     exerciseType: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -46,6 +56,33 @@ export const Exercise = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'mock',
+    },
+    sessionId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    targetVocabularyIds: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
+    adaptiveExerciseType: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    grammarTargets: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
+    usedVocabulary: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
+    generationMetadata: {
+      type: DataTypes.JSON,
+      allowNull: true,
     },
   },
   {
