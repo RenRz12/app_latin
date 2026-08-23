@@ -7,6 +7,7 @@ import {
   passwordMatches,
   verifySessionToken,
 } from '../src/services/authService.js'
+import { originIsAllowed } from '../src/config/cors.js'
 import { validateVocabularyPayload } from '../src/services/vocabularyImportService.js'
 
 test('la sesión privada detecta alteraciones y vencimiento', () => {
@@ -25,6 +26,15 @@ test('la sesión privada detecta alteraciones y vencimiento', () => {
   )
   assert.equal(passwordMatches('contraseña segura', 'contraseña segura'), true)
   assert.equal(passwordMatches('incorrecta', 'contraseña segura'), false)
+})
+
+test('CORS permite el propio dominio publicado y rechaza otros orígenes', () => {
+  const publishedOrigin = 'https://app-latin.onrender.com'
+
+  assert.equal(originIsAllowed(publishedOrigin, publishedOrigin), true)
+  assert.equal(originIsAllowed(`${publishedOrigin}/`, publishedOrigin), true)
+  assert.equal(originIsAllowed('http://127.0.0.1:5173'), true)
+  assert.equal(originIsAllowed('https://sitio-no-permitido.example', publishedOrigin), false)
 })
 
 test('el despliegue incluye una semilla completa de Familia Romana', async () => {

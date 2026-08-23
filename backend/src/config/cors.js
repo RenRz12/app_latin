@@ -10,14 +10,43 @@ const defaultClientOrigins = [
 
 const allowedOrigins = [...new Set([...defaultClientOrigins, ...env.clientOrigins])]
 
-export const corsMiddleware = cors({
+const reflectAllowedOrigin = cors({
   credentials: true,
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true)
-      return
-    }
-
-    callback(new Error(`Origen no permitido por CORS: ${origin}`))
-  },
+  origin: true,
 })
+
+function normalizedOrigin(value) {
+  if (!value) return ''
+
+  try {
+    return new URL(value).origin
+  } catch {
+    return ''
+  }
+}
+
+export function originIsAllowed(origin, ownOrigin = '') {
+  if (!origin) return true
+
+  const normalizedRequestOrigin = normalizedOrigin(origin)
+  if (!normalizedRequestOrigin) return false
+
+  return (
+    allowedOrigins.some(
+      (allowedOrigin) => normalizedOrigin(allowedOrigin) === normalizedRequestOrigin,
+    ) ||
+    (ownOrigin && normalizedOrigin(ownOrigin) === normalizedRequestOrigin)
+  )
+}
+
+export function corsMiddleware(request, response, next) {
+  const origin = request.get('origin') || ''
+  const ownOrigin = `${request.protocol}://${request.get('host')}`
+
+  if (!originIsAllowed(origin, ownOrigin)) {
+    next(new Error(`Origen no permitido por CORS: ${origin}`))
+    return
+  }
+
+  reflectAllowedOrigin(request, response, next)
+}
