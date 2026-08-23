@@ -3,12 +3,14 @@ import { sequelize } from '../database/sequelize.js'
 import { Exercise } from '../models/Exercise.js'
 import { PracticeSession } from '../models/PracticeSession.js'
 import { User } from '../models/User.js'
+import { Vocabulary } from '../models/Vocabulary.js'
 import { VocabularyReviewEvent } from '../models/VocabularyReviewEvent.js'
 import {
   createExercises,
   findExercisesBySession,
 } from '../repositories/exerciseRepository.js'
 import { AppError } from '../utils/AppError.js'
+import { isPracticeReadyVocabulary } from '../utils/vocabularyEligibility.js'
 import {
   evaluateOpenVocabularyAnswerWithAi,
   generateAdaptiveExercisesWithAi,
@@ -212,7 +214,45 @@ export async function getAdaptivePracticeSession(sessionId) {
 export async function createAdaptiveSessionPrompt(sessionId) {
   const session = await findAdaptiveSession(sessionId)
   const storedPlan = parseJson(session.planData, {})
-  if (storedPlan.generationRequest && storedPlan.generationPrompt) {
+  const vocabularyIds = storedPlan.items.map((item) => Number(item.vocabularyId))
+  const vocabulary = await Vocabulary.findAll({ where: { id: vocabularyIds } })
+  const vocabularyById = new Map(vocabulary.map((word) => [word.id, word]))
+  const refreshedItems = storedPlan.items.map((item) => {
+    const word = vocabularyById.get(Number(item.vocabularyId))
+    if (!isPracticeReadyVocabulary(word)) {
+      throw new AppError(
+        'Esta sesión contiene vocabulario pendiente de revisión. Crea una sesión nueva para continuar.',
+        409,
+      )
+    }
+    return {
+      ...item,
+      lemma: word.lemma,
+      normalizedLemma: word.normalizedLemma,
+      meaning: word.meaningEs,
+      partOfSpeech: word.partOfSpeech,
+      chapterOrigin: word.firstAppearanceChapter,
+      morphologyReference: {
+        nominative: word.nominative,
+        genitive: word.genitive,
+        gender: word.gender,
+        declension: word.declension,
+        principalParts: word.principalParts,
+        conjugation: word.conjugation,
+        adjectiveForms: word.adjectiveForms,
+        sourceForms: word.morphologyData?.sourceForms || [],
+      },
+    }
+  })
+  const refreshedPlan = { ...storedPlan, items: refreshedItems }
+  const planChanged =
+    JSON.stringify(storedPlan.items) !== JSON.stringify(refreshedItems)
+
+  if (
+    !planChanged &&
+    storedPlan.generationRequest &&
+    storedPlan.generationPrompt
+  ) {
     return {
       sessionId: session.id,
       generationRequest: storedPlan.generationRequest,
@@ -221,20 +261,20 @@ export async function createAdaptiveSessionPrompt(sessionId) {
     }
   }
 
-  const targetVocabularyIds = storedPlan.items.map((item) => item.vocabularyId)
+  const targetVocabularyIds = refreshedItems.map((item) => item.vocabularyId)
   const supportVocabulary = await selectSupportVocabulary({
     userId: session.userId,
     readingChapter: session.currentReadingChapter,
     targetVocabularyIds,
   })
   const generationRequest = buildExerciseGenerationRequest(
-    storedPlan,
+    refreshedPlan,
     supportVocabulary,
   )
   const prompt = buildAdaptiveExercisePrompt(generationRequest)
   await session.update({
     planData: {
-      ...storedPlan,
+      ...refreshedPlan,
       generationRequest,
       generationPrompt: prompt,
     },

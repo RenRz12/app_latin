@@ -1,11 +1,14 @@
 import { DataTypes, QueryTypes } from 'sequelize'
 import { sequelize } from './sequelize.js'
 import '../models/index.js'
+import { VOCABULARY_CATALOG_FIXES } from '../data/vocabularyCatalogFixes.js'
 
 const ADAPTIVE_VOCABULARY_MIGRATION = '202608140001-adaptive-vocabulary'
 const ADAPTIVE_REVIEW_ENGINE_MIGRATION = '202608140002-adaptive-review-engine'
 const LEGACY_VOCABULARY_SYNC_MIGRATION =
   '202608190001-legacy-vocabulary-progress-sync'
+const VOCABULARY_CATALOG_FIXES_MIGRATION =
+  '202608230001-vocabulary-catalog-fixes'
 
 async function ensureMigrationTable() {
   await sequelize.query(`
@@ -261,6 +264,103 @@ export async function runDatabaseMigrations() {
         {
           replacements: {
             name: LEGACY_VOCABULARY_SYNC_MIGRATION,
+            appliedAt: new Date(),
+          },
+          transaction,
+        },
+      )
+    })
+    appliedAny = true
+  }
+
+  if (!(await migrationWasApplied(VOCABULARY_CATALOG_FIXES_MIGRATION))) {
+    await sequelize.transaction(async (transaction) => {
+      for (const fix of VOCABULARY_CATALOG_FIXES) {
+        const [legacyWord] = await sequelize.query(
+          `SELECT id
+           FROM vocabulary
+           WHERE normalizedLemma = :legacyNormalizedLemma
+           LIMIT 1`,
+          {
+            replacements: {
+              legacyNormalizedLemma: fix.legacyNormalizedLemma,
+            },
+            type: QueryTypes.SELECT,
+            transaction,
+          },
+        )
+        if (!legacyWord) continue
+
+        const [canonicalWord] = await sequelize.query(
+          `SELECT id
+           FROM vocabulary
+           WHERE normalizedLemma = :normalizedLemma
+             AND id <> :legacyId
+           LIMIT 1`,
+          {
+            replacements: {
+              normalizedLemma: fix.normalizedLemma,
+              legacyId: legacyWord.id,
+            },
+            type: QueryTypes.SELECT,
+            transaction,
+          },
+        )
+        if (canonicalWord) {
+          throw new Error(
+            `No se puede corregir ${fix.legacyNormalizedLemma}: el lema ${fix.normalizedLemma} ya existe.`,
+          )
+        }
+
+        await sequelize.query(
+          `UPDATE vocabulary
+           SET lemma = :lemma,
+               normalizedLemma = :normalizedLemma,
+               meaningEs = :meaningEs,
+               partOfSpeech = :partOfSpeech,
+               firstAppearanceChapter = :firstAppearanceChapter,
+               nominative = :nominative,
+               genitive = :genitive,
+               gender = :gender,
+               principalParts = :principalParts,
+               morphologyData = :morphologyData,
+               importStatus = 'VERIFIED',
+               updatedAt = :updatedAt
+           WHERE id = :id`,
+          {
+            replacements: {
+              ...fix,
+              id: legacyWord.id,
+              principalParts: fix.principalParts
+                ? JSON.stringify(fix.principalParts)
+                : null,
+              morphologyData: JSON.stringify(fix.morphologyData),
+              updatedAt: new Date(),
+            },
+            transaction,
+          },
+        )
+        await sequelize.query(
+          `UPDATE vocabulary_chapters
+           SET chapter = :chapter,
+               firstOccurrenceLine = :firstOccurrenceLine
+           WHERE vocabularyId = :vocabularyId`,
+          {
+            replacements: {
+              vocabularyId: legacyWord.id,
+              chapter: fix.firstAppearanceChapter,
+              firstOccurrenceLine: fix.firstOccurrenceLine,
+            },
+            transaction,
+          },
+        )
+      }
+
+      await sequelize.query(
+        'INSERT INTO schema_migrations (name, appliedAt) VALUES (:name, :appliedAt)',
+        {
+          replacements: {
+            name: VOCABULARY_CATALOG_FIXES_MIGRATION,
             appliedAt: new Date(),
           },
           transaction,

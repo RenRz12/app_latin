@@ -50,6 +50,16 @@ export function buildExerciseGenerationRequest(plan, supportVocabulary) {
   if (new Set(targetIds).size !== targetIds.length) {
     throw new AppError('El plan adaptativo contiene objetivos repetidos.', 500)
   }
+  if (
+    plan.items.some(
+      (item) => typeof item.meaning !== 'string' || !item.meaning.trim(),
+    )
+  ) {
+    throw new AppError(
+      'El plan contiene vocabulario pendiente de verificación. Crea una sesión nueva.',
+      409,
+    )
+  }
 
   return {
     schemaVersion: 2,
@@ -125,6 +135,7 @@ export function buildAdaptiveExercisePrompt(generationRequest) {
     '- La palabra target debe ser realmente necesaria para resolver el ejercicio.',
     '- No reemplaces el target por un sinónimo ni evalúes otra palabra como objetivo.',
     '- Usá preferentemente solo supportVocabulary; podés agregar palabras funcionales elementales.',
+    '- Las palabras funcionales sin vocabularyId pueden aparecer en el texto, pero no deben agregarse a usedVocabulary.',
     '- No introduzcas vocabulario avanzado ni estructuras fuera de allowedGrammar.',
     '- La oración debe sonar natural en latín clásico y tener una respuesta inequívoca.',
     '- Usá macrones cuando existan en los datos, pero no los conviertas en objetivo salvo indicación expresa.',

@@ -3,6 +3,7 @@ import { ADAPTIVE_REVIEW_CONFIG } from '../config/adaptiveReviewConfig.js'
 import { UserVocabularyProgress } from '../models/UserVocabularyProgress.js'
 import { Vocabulary } from '../models/Vocabulary.js'
 import { VocabularyChapter } from '../models/VocabularyChapter.js'
+import { isPracticeReadyVocabulary } from '../utils/vocabularyEligibility.js'
 
 export async function selectSupportVocabulary({
   userId,
@@ -29,6 +30,7 @@ export async function selectSupportVocabulary({
   )
 
   return vocabulary
+    .filter(isPracticeReadyVocabulary)
     .filter((word) => !targetIds.has(word.id))
     .map((word) => {
       const progress = progressById.get(word.id)

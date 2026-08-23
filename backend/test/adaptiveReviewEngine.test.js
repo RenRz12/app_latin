@@ -20,6 +20,7 @@ const {
 } = await import('../src/services/exercisePromptBuilderService.js')
 const {
   createAdaptivePracticeSession,
+  createAdaptiveSessionPrompt,
   generateAdaptiveSessionExercises,
   getAdaptivePracticeSession,
   submitAdaptiveExerciseAnswer,
@@ -530,6 +531,74 @@ test('crea un plan persistente, genera sin cambiar progreso y actualiza solo al 
     ),
   )
   assert.equal(supportEvents.every((count) => count === 0), true)
+})
+
+test('excluye objetivos sin significado verificado y refresca prompts antiguos', async () => {
+  const user = await models.User.create({ displayName: 'Catálogo verificado' })
+  await models.ProfileSettings.create({
+    id: 1,
+    vocabularyChapterFrom: 5,
+    vocabularyChapterTo: 5,
+  })
+  await models.ReadingProgress.create({
+    userId: user.id,
+    book: 'Familia Romana',
+    currentChapter: 5,
+  })
+  const hortus = await models.Vocabulary.create({
+    lemma: 'hortus',
+    normalizedLemma: 'hortus',
+    meaningEs: 'jardín',
+    partOfSpeech: 'NOUN',
+    firstAppearanceChapter: 5,
+    nominative: 'hortus',
+    genitive: '-ī',
+    gender: 'm',
+    morphologyData: { indexEntry: 'hortus -ī m' },
+    importStatus: 'VERIFIED',
+  })
+  const corrupted = await models.Vocabulary.create({
+    lemma: 'grammatiea',
+    normalizedLemma: 'grammatiea',
+    meaningEs: null,
+    partOfSpeech: 'NOUN',
+    firstAppearanceChapter: 5,
+    morphologyData: { indexEntry: 'grammatiea -ae' },
+    importStatus: 'VERIFIED',
+  })
+  await models.VocabularyChapter.bulkCreate([
+    { vocabularyId: hortus.id, chapter: 5, firstOccurrenceLine: 1 },
+    { vocabularyId: corrupted.id, chapter: 5, firstOccurrenceLine: 2 },
+  ])
+
+  const session = await createAdaptivePracticeSession({
+    userId: user.id,
+    sessionSize: 2,
+    now: NOW,
+  })
+  assert.equal(session.plan.items.length, 1)
+  assert.equal(session.plan.items[0].lemma, 'hortus')
+
+  const storedSession = await models.PracticeSession.findByPk(session.id)
+  await storedSession.update({
+    planData: {
+      ...session.plan,
+      items: session.plan.items.map((item) => ({
+        ...item,
+        lemma: 'honus',
+        normalizedLemma: 'honus',
+        meaning: null,
+      })),
+      generationRequest: { stale: true },
+      generationPrompt: 'prompt antiguo con honus',
+    },
+  })
+
+  const prepared = await createAdaptiveSessionPrompt(session.id)
+  assert.equal(prepared.reused, false)
+  assert.equal(prepared.generationRequest.targetVocabulary[0].lemma, 'hortus')
+  assert.equal(prepared.generationRequest.targetVocabulary[0].meaning, 'jardín')
+  assert.doesNotMatch(prepared.prompt, /honus/)
 })
 
 test('las métricas separan capítulo leído de consolidación de vocabulario', async () => {

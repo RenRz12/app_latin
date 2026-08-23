@@ -50,6 +50,25 @@ test('el despliegue incluye una semilla completa de Familia Romana', async () =>
     new Set(seed.entries.flatMap((entry) => entry.chapters.map((item) => item.chapter))),
     new Set(Array.from({ length: 35 }, (_value, index) => index + 1)),
   )
+  const correctedEntries = new Map(
+    seed.entries
+      .filter((entry) => entry.morphologyData?.catalogCorrection)
+      .map((entry) => [entry.normalizedLemma, entry]),
+  )
+  assert.deepEqual(
+    [...correctedEntries.keys()].sort(),
+    ['anulus', 'consistere', 'hortus', 'lilium', 'nasus'],
+  )
+  assert.equal(
+    seed.entries.some((entry) =>
+      ['corisistere', 'honus', 'inulus', 'mium', 'nasusim'].includes(
+        entry.normalizedLemma,
+      ),
+    ),
+    false,
+  )
+  assert.equal(correctedEntries.get('anulus').lemma, 'ānulus')
+  assert.equal(correctedEntries.get('lilium').meaningEs, 'lirio')
 })
 
 test('el Blueprint conserva SQLite en el disco y protege la aplicación', async () => {

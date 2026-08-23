@@ -4315,31 +4315,32 @@
       ]
     },
     {
-      "lemma": "corisistere",
-      "normalizedLemma": "corisistere",
-      "meaningEs": null,
+      "lemma": "cōnsistere",
+      "normalizedLemma": "consistere",
+      "meaningEs": "detenerse",
       "partOfSpeech": "VERB",
       "homographKey": "",
-      "firstAppearanceChapter": 5,
+      "firstAppearanceChapter": 8,
       "nominative": null,
       "genitive": null,
       "gender": null,
       "declension": null,
       "principalParts": [
-        "cori-sistere",
+        "cōn-sistere",
         "-stitisse"
       ],
       "conjugation": null,
       "adjectiveForms": null,
       "morphologyData": {
-        "indexEntry": "cori-sistere -stitisse",
-        "rawOccurrences": 1
+        "indexEntry": "cōn-sistere -stitisse",
+        "rawOccurrences": 1,
+        "catalogCorrection": "Index Vocabulorum, p. 315"
       },
       "importStatus": "VERIFIED",
       "sourceReference": "Familia Romana — Index Vocabulorum",
       "chapters": [
         {
-          "chapter": 5,
+          "chapter": 8,
           "firstOccurrenceLine": 12
         }
       ]
@@ -4550,22 +4551,23 @@
       ]
     },
     {
-      "lemma": "honus",
-      "normalizedLemma": "honus",
-      "meaningEs": null,
+      "lemma": "hortus",
+      "normalizedLemma": "hortus",
+      "meaningEs": "jardín",
       "partOfSpeech": "NOUN",
       "homographKey": "",
       "firstAppearanceChapter": 5,
-      "nominative": "honus",
-      "genitive": "-i",
+      "nominative": "hortus",
+      "genitive": "-ī",
       "gender": "m",
       "declension": null,
       "principalParts": null,
       "conjugation": null,
       "adjectiveForms": null,
       "morphologyData": {
-        "indexEntry": "honus -i m",
-        "rawOccurrences": 1
+        "indexEntry": "hortus -ī m",
+        "rawOccurrences": 1,
+        "catalogCorrection": "Index Vocabulorum, p. 317"
       },
       "importStatus": "VERIFIED",
       "sourceReference": "Familia Romana — Index Vocabulorum",
@@ -4631,49 +4633,51 @@
       ]
     },
     {
-      "lemma": "inulus",
-      "normalizedLemma": "inulus",
-      "meaningEs": null,
-      "partOfSpeech": "UNKNOWN",
+      "lemma": "ānulus",
+      "normalizedLemma": "anulus",
+      "meaningEs": "anillo",
+      "partOfSpeech": "NOUN",
       "homographKey": "",
-      "firstAppearanceChapter": 5,
-      "nominative": null,
-      "genitive": null,
-      "gender": null,
+      "firstAppearanceChapter": 8,
+      "nominative": "ānulus",
+      "genitive": "-ī",
+      "gender": "m",
       "declension": null,
       "principalParts": null,
       "conjugation": null,
       "adjectiveForms": null,
       "morphologyData": {
-        "indexEntry": "inulus -Im",
-        "rawOccurrences": 1
+        "indexEntry": "ānulus -ī m",
+        "rawOccurrences": 1,
+        "catalogCorrection": "Index Vocabulorum, p. 313"
       },
-      "importStatus": "NEEDS_REVIEW",
+      "importStatus": "VERIFIED",
       "sourceReference": "Familia Romana — Index Vocabulorum",
       "chapters": [
         {
-          "chapter": 5,
+          "chapter": 8,
           "firstOccurrenceLine": 7
         }
       ]
     },
     {
-      "lemma": "mium",
-      "normalizedLemma": "mium",
-      "meaningEs": null,
+      "lemma": "līlium",
+      "normalizedLemma": "lilium",
+      "meaningEs": "lirio",
       "partOfSpeech": "NOUN",
       "homographKey": "",
       "firstAppearanceChapter": 5,
-      "nominative": "mium",
-      "genitive": "-i",
+      "nominative": "līlium",
+      "genitive": "-ī",
       "gender": "n",
       "declension": null,
       "principalParts": null,
       "conjugation": null,
       "adjectiveForms": null,
       "morphologyData": {
-        "indexEntry": "mium -i n",
-        "rawOccurrences": 1
+        "indexEntry": "līlium -ī n",
+        "rawOccurrences": 1,
+        "catalogCorrection": "Index Vocabulorum, p. 319"
       },
       "importStatus": "VERIFIED",
       "sourceReference": "Familia Romana — Index Vocabulorum",
@@ -4714,24 +4718,25 @@
       ]
     },
     {
-      "lemma": "nasusim",
-      "normalizedLemma": "nasusim",
-      "meaningEs": null,
-      "partOfSpeech": "UNKNOWN",
+      "lemma": "nāsus",
+      "normalizedLemma": "nasus",
+      "meaningEs": "nariz",
+      "partOfSpeech": "NOUN",
       "homographKey": "",
       "firstAppearanceChapter": 5,
-      "nominative": null,
-      "genitive": null,
-      "gender": null,
+      "nominative": "nāsus",
+      "genitive": "-ī",
+      "gender": "m",
       "declension": null,
       "principalParts": null,
       "conjugation": null,
       "adjectiveForms": null,
       "morphologyData": {
-        "indexEntry": "nasus-Im",
-        "rawOccurrences": 1
+        "indexEntry": "nāsus -ī m",
+        "rawOccurrences": 1,
+        "catalogCorrection": "Index Vocabulorum, p. 320"
       },
-      "importStatus": "NEEDS_REVIEW",
+      "importStatus": "VERIFIED",
       "sourceReference": "Familia Romana — Index Vocabulorum",
       "chapters": [
         {

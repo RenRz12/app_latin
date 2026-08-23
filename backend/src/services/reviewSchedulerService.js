@@ -7,6 +7,7 @@ import { UserVocabularyProgress } from '../models/UserVocabularyProgress.js'
 import { Vocabulary } from '../models/Vocabulary.js'
 import { VocabularyChapter } from '../models/VocabularyChapter.js'
 import { VocabularyReviewEvent } from '../models/VocabularyReviewEvent.js'
+import { isPracticeReadyVocabulary } from '../utils/vocabularyEligibility.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -406,7 +407,7 @@ export async function selectAdaptiveVocabulary({
   }
 
   return selectVocabularyCandidates({
-    vocabulary,
+    vocabulary: vocabulary.filter(isPracticeReadyVocabulary),
     progressByVocabularyId,
     eventsByVocabularyId,
     currentChapter,
