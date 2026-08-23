@@ -47,6 +47,9 @@ test('el Blueprint conserva SQLite en el disco y protege la aplicación', async 
   const rootPackage = JSON.parse(
     await readFile(new URL('../../package.json', import.meta.url), 'utf8'),
   )
+  const frontendPackage = JSON.parse(
+    await readFile(new URL('../../frontend/package.json', import.meta.url), 'utf8'),
+  )
   assert.match(blueprint, /buildCommand: npm run render-build/)
   assert.match(blueprint, /startCommand: npm start/)
   assert.match(blueprint, /healthCheckPath: \/api\/health/)
@@ -55,4 +58,5 @@ test('el Blueprint conserva SQLite en el disco y protege la aplicación', async 
   assert.match(blueprint, /mountPath: \/var\/data/)
   assert.match(rootPackage.scripts['render-build'], /backend install/)
   assert.equal(rootPackage.scripts.start, 'npm --prefix backend start')
+  assert.match(frontendPackage.scripts.build, /inlineBuildAssets\.mjs/)
 })
