@@ -1,5 +1,7 @@
+import { parsePastedJson } from './pastedJson.js'
+
 export function readExercisesFromPastedJson(text) {
-  const parsed = JSON.parse(text)
+  const parsed = parsePastedJson(text)
 
   if (Array.isArray(parsed)) {
     return parsed

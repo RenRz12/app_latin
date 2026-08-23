@@ -1,16 +1,11 @@
 import { getVerbFamiliesForTense } from '../data/verbTenseOptions.js'
+import { parsePastedJson } from './pastedJson.js'
 
 const requiredPersons = [
   { id: 'first', label: '1.ª persona' },
   { id: 'second', label: '2.ª persona' },
   { id: 'third', label: '3.ª persona' },
 ]
-
-function getJsonText(text) {
-  const trimmedText = text.trim()
-  const fencedMatch = trimmedText.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
-  return fencedMatch ? fencedMatch[1] : trimmedText
-}
 
 function requireText(value, fieldName) {
   if (typeof value !== 'string' || !value.trim()) {
@@ -205,13 +200,7 @@ export function readVerbTenseExerciseFromPastedJson(
   expectedTenseId,
   { includePassive = false, excludedVerbs = [] } = {},
 ) {
-  let parsed
-
-  try {
-    parsed = JSON.parse(getJsonText(text))
-  } catch {
-    throw new Error('El contenido pegado no es un JSON válido.')
-  }
+  const parsed = parsePastedJson(text)
 
   const exercise = parsed.verbTenseExercise || parsed
   const families = getVerbFamiliesForTense(expectedTenseId)

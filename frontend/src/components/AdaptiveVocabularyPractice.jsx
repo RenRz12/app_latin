@@ -9,6 +9,7 @@ import {
   importAdaptiveVocabularyExercises,
 } from '../services/adaptiveVocabularyService.js'
 import { ExerciseCard } from './ExerciseCard.jsx'
+import { parsePastedJson } from '../utils/pastedJson.js'
 
 const TYPE_LABELS = {
   VOCABULARY_MULTIPLE_CHOICE: 'Reconocimiento',
@@ -21,14 +22,6 @@ const TYPE_LABELS = {
   LEMMA_IDENTIFICATION: 'Identificar lema',
   MORPHOLOGY_PRODUCTION: 'Producción morfológica',
   FREE_PRODUCTION: 'Producción libre',
-}
-
-function parseImportedJson(value) {
-  const cleaned = value
-    .trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/, '')
-  return JSON.parse(cleaned)
 }
 
 export function AdaptiveVocabularyPractice({
@@ -154,7 +147,7 @@ export function AdaptiveVocabularyPractice({
       const activeSession = await ensureSession()
       const imported = await importAdaptiveVocabularyExercises(
         activeSession.id,
-        parseImportedJson(importText),
+        parsePastedJson(importText),
       )
       const loaded = await getAdaptiveVocabularySession(activeSession.id)
       setSession(loaded)

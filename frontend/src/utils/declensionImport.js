@@ -1,3 +1,5 @@
+import { parsePastedJson } from './pastedJson.js'
+
 const requiredCases = [
   { id: 'nominative', label: 'Nominativo' },
   { id: 'genitive', label: 'Genitivo' },
@@ -6,12 +8,6 @@ const requiredCases = [
   { id: 'ablative', label: 'Ablativo' },
   { id: 'vocative', label: 'Vocativo' },
 ]
-
-function getJsonText(text) {
-  const trimmedText = text.trim()
-  const fencedMatch = trimmedText.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
-  return fencedMatch ? fencedMatch[1] : trimmedText
-}
 
 function requireText(value, fieldName) {
   if (typeof value !== 'string' || !value.trim()) {
@@ -91,13 +87,7 @@ export function buildDeclensionPrompt(
 }
 
 export function readDeclensionExerciseFromPastedJson(text, expectedDeclensionId) {
-  let parsed
-
-  try {
-    parsed = JSON.parse(getJsonText(text))
-  } catch {
-    throw new Error('El contenido pegado no es un JSON valido.')
-  }
+  const parsed = parsePastedJson(text)
 
   const exercise = parsed.declensionExercise || parsed
 

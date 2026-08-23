@@ -1,3 +1,5 @@
+import { parsePastedJson } from './pastedJson.js'
+
 const sentenceCount = 10
 
 export const combinedVerbTenseOptions = [
@@ -36,12 +38,6 @@ function requireVerbTense(value, field, allowMixed = false) {
 
 export function getCombinedVerbTenseLabel(tenseId) {
   return combinedVerbTenseOptions.find((option) => option.id === tenseId)?.label || 'Mixta'
-}
-
-function getJsonText(text) {
-  const trimmed = text.trim()
-  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
-  return fenced ? fenced[1] : trimmed
 }
 
 function requireText(value, field) {
@@ -139,12 +135,7 @@ export function readCombinedPracticeFromPastedJson(
   chapterTo,
   selectedVerbTense = 'mixed',
 ) {
-  let parsed
-  try {
-    parsed = JSON.parse(getJsonText(text))
-  } catch {
-    throw new Error('El contenido pegado no es un JSON válido.')
-  }
+  const parsed = parsePastedJson(text)
 
   const practice = parsed.combinedPractice || parsed
   if (!practice || practice.direction !== 'es_la') {
