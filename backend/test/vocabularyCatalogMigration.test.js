@@ -44,10 +44,22 @@ test('corrige el catálogo existente sin cambiar los identificadores ni el progr
     learningStage: 'RECOGNITION',
     recognitionScore: 40,
   })
+  const seedWord = await models.Vocabulary.create({
+    lemma: 'littera',
+    normalizedLemma: 'littera',
+    meaningEs: null,
+    partOfSpeech: 'NOUN',
+    firstAppearanceChapter: 1,
+    morphologyData: { indexEntry: 'littera -ae' },
+    importStatus: 'VERIFIED',
+  })
 
   await runDatabaseMigrations()
 
-  const corrected = await models.Vocabulary.findAll({ order: [['id', 'ASC']] })
+  const corrected = await models.Vocabulary.findAll({
+    where: { id: legacyWords.map((word) => word.id) },
+    order: [['id', 'ASC']],
+  })
   assert.deepEqual(
     corrected.map((word) => word.normalizedLemma),
     ['consistere', 'hortus', 'anulus', 'lilium', 'nasus'],
@@ -58,6 +70,7 @@ test('corrige el catálogo existente sin cambiar los identificadores ni el progr
   )
   assert.equal(corrected[1].lemma, 'hortus')
   assert.equal(corrected[1].meaningEs, 'jardín')
+  assert.equal((await seedWord.reload()).meaningEs, 'letra')
   assert.equal(
     (await models.UserVocabularyProgress.findOne()).vocabularyId,
     legacyWords[1].id,

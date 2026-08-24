@@ -50,6 +50,28 @@ test('el despliegue incluye una semilla completa de Familia Romana', async () =>
     new Set(seed.entries.flatMap((entry) => entry.chapters.map((item) => item.chapter))),
     new Set(Array.from({ length: 35 }, (_value, index) => index + 1)),
   )
+  const practiceReadyByChapter = new Map(
+    Array.from({ length: 35 }, (_value, index) => [index + 1, 0]),
+  )
+  for (const entry of seed.entries.filter((item) => item.meaningEs?.trim())) {
+    practiceReadyByChapter.set(
+      entry.firstAppearanceChapter,
+      practiceReadyByChapter.get(entry.firstAppearanceChapter) + 1,
+    )
+  }
+  assert.ok(
+    [...practiceReadyByChapter.values()].every((count) => count >= 15),
+    'Cada capítulo debe ofrecer al menos 15 palabras con significado español.',
+  )
+  assert.equal(
+    seed.entries.filter(
+      (entry) =>
+        entry.meaningEs?.trim() &&
+        entry.firstAppearanceChapter >= 20 &&
+        entry.firstAppearanceChapter <= 25,
+    ).length,
+    195,
+  )
   const correctedEntries = new Map(
     seed.entries
       .filter((entry) => entry.morphologyData?.catalogCorrection)

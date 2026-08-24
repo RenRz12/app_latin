@@ -1,4 +1,5 @@
 import { DataTypes, QueryTypes } from 'sequelize'
+import { readFile } from 'node:fs/promises'
 import { databaseDialect, sequelize } from './sequelize.js'
 import '../models/index.js'
 import { VOCABULARY_CATALOG_FIXES } from '../data/vocabularyCatalogFixes.js'
@@ -9,6 +10,8 @@ const LEGACY_VOCABULARY_SYNC_MIGRATION =
   '202608190001-legacy-vocabulary-progress-sync'
 const VOCABULARY_CATALOG_FIXES_MIGRATION =
   '202608230001-vocabulary-catalog-fixes'
+const VOCABULARY_MEANINGS_MIGRATION = '202608240001-vocabulary-spanish-meanings'
+const VOCABULARY_MEANING_UPDATES_TABLE = 'vocabulary_meaning_updates_20260824'
 
 function normalizedTableName(table) {
   if (typeof table === 'string') return table
@@ -65,6 +68,79 @@ async function removeEmptyFailedBackup(queryInterface, transaction) {
     )
   }
   await queryInterface.dropTable('vocabulary_backup', { transaction })
+}
+
+async function backfillVocabularyMeanings(queryInterface, transaction) {
+  const seed = JSON.parse(
+    await readFile(
+      new URL('../../seed/familia-romana-vocabulary.json', import.meta.url),
+      'utf8',
+    ),
+  )
+  const updates = seed.entries
+    .filter(
+      (entry) =>
+        typeof entry.meaningEs === 'string' && Boolean(entry.meaningEs.trim()),
+    )
+    .map((entry) => ({
+      normalizedLemma: entry.normalizedLemma,
+      partOfSpeech: entry.partOfSpeech,
+      homographKey: entry.homographKey || '',
+      meaningEs: entry.meaningEs,
+      sourceReference: entry.sourceReference,
+    }))
+
+  await queryInterface.createTable(
+    VOCABULARY_MEANING_UPDATES_TABLE,
+    {
+      normalizedLemma: { type: DataTypes.STRING, allowNull: false },
+      partOfSpeech: { type: DataTypes.STRING, allowNull: false },
+      homographKey: { type: DataTypes.STRING, allowNull: false },
+      meaningEs: { type: DataTypes.TEXT, allowNull: false },
+      sourceReference: { type: DataTypes.STRING, allowNull: false },
+    },
+    { transaction },
+  )
+  for (let index = 0; index < updates.length; index += 500) {
+    await queryInterface.bulkInsert(
+      VOCABULARY_MEANING_UPDATES_TABLE,
+      updates.slice(index, index + 500),
+      { transaction },
+    )
+  }
+
+  await sequelize.query(
+    `UPDATE vocabulary
+     SET "meaningEs" = (
+           SELECT updates."meaningEs"
+           FROM ${VOCABULARY_MEANING_UPDATES_TABLE} AS updates
+           WHERE updates."normalizedLemma" = vocabulary."normalizedLemma"
+             AND updates."partOfSpeech" = vocabulary."partOfSpeech"
+             AND updates."homographKey" = vocabulary."homographKey"
+           LIMIT 1
+         ),
+         "sourceReference" = (
+           SELECT updates."sourceReference"
+           FROM ${VOCABULARY_MEANING_UPDATES_TABLE} AS updates
+           WHERE updates."normalizedLemma" = vocabulary."normalizedLemma"
+             AND updates."partOfSpeech" = vocabulary."partOfSpeech"
+             AND updates."homographKey" = vocabulary."homographKey"
+           LIMIT 1
+         ),
+         "updatedAt" = CURRENT_TIMESTAMP
+     WHERE ("meaningEs" IS NULL OR TRIM("meaningEs") = '')
+       AND EXISTS (
+         SELECT 1
+         FROM ${VOCABULARY_MEANING_UPDATES_TABLE} AS updates
+         WHERE updates."normalizedLemma" = vocabulary."normalizedLemma"
+           AND updates."partOfSpeech" = vocabulary."partOfSpeech"
+           AND updates."homographKey" = vocabulary."homographKey"
+       )`,
+    { transaction },
+  )
+  await queryInterface.dropTable(VOCABULARY_MEANING_UPDATES_TABLE, {
+    transaction,
+  })
 }
 
 export async function runDatabaseMigrations() {
@@ -365,6 +441,18 @@ export async function runDatabaseMigrations() {
       await recordMigration(
         queryInterface,
         VOCABULARY_CATALOG_FIXES_MIGRATION,
+        transaction,
+      )
+    })
+    appliedAny = true
+  }
+
+  if (!(await migrationWasApplied(VOCABULARY_MEANINGS_MIGRATION))) {
+    await sequelize.transaction(async (transaction) => {
+      await backfillVocabularyMeanings(queryInterface, transaction)
+      await recordMigration(
+        queryInterface,
+        VOCABULARY_MEANINGS_MIGRATION,
         transaction,
       )
     })
