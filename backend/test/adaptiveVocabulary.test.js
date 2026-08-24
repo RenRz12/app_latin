@@ -76,6 +76,32 @@ test("importa lemas únicos con una relación M:N entre vocabulario y capítulos
   assert.equal(validation.valid, true);
 });
 
+test("carga la semilla inicial por lotes con todas sus relaciones", async () => {
+  const entries = [
+    vocabularyEntry({
+      chapters: [
+        { chapter: 1, firstOccurrenceLine: 3 },
+        { chapter: 2, firstOccurrenceLine: 18 },
+      ],
+    }),
+    vocabularyEntry({
+      lemma: "servus",
+      normalizedLemma: "servus",
+      firstAppearanceChapter: 2,
+      chapters: [{ chapter: 2, firstOccurrenceLine: 5 }],
+    }),
+  ];
+
+  const imported = await importVocabularyEntries(entries, {
+    initialSeed: true,
+  });
+
+  assert.equal(imported.wordsCreated, 2);
+  assert.equal(imported.chapterLinksCreated, 3);
+  assert.equal(await models.Vocabulary.count(), 2);
+  assert.equal(await models.VocabularyChapter.count(), 3);
+});
+
 test("mīles, mīlitem y mīlitibus se conservan como un solo lema", async () => {
   const entry = vocabularyEntry({
     lemma: "mīles",

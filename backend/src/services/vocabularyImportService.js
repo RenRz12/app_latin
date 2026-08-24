@@ -160,12 +160,55 @@ async function buildDryRun(entries) {
   }
 }
 
-export async function importVocabularyEntries(entries, { dryRun = false } = {}) {
+async function importInitialVocabularySeed(entries) {
+  return Vocabulary.sequelize.transaction(async (transaction) => {
+    const existingCount = await Vocabulary.count({ transaction })
+    if (existingCount > 0) {
+      throw new Error(
+        'La importación inicial por lotes requiere una tabla de vocabulario vacía.',
+      )
+    }
+
+    const words = await Vocabulary.bulkCreate(
+      entries.map((entry) => buildIncomingValues(entry)),
+      { transaction, returning: true },
+    )
+    const wordsByKey = new Map(words.map((word) => [entryKey(word), word]))
+    const chapterLinks = entries.flatMap((entry) => {
+      const word = wordsByKey.get(entryKey(entry))
+      if (!word) {
+        throw new Error(`No se pudo vincular el lema ${entry.lemma}.`)
+      }
+      return entry.chapters.map((chapter) => ({
+        vocabularyId: word.id,
+        chapter: chapter.chapter,
+        firstOccurrenceLine: chapter.firstOccurrenceLine || null,
+      }))
+    })
+
+    await VocabularyChapter.bulkCreate(chapterLinks, { transaction })
+
+    return {
+      dryRun: false,
+      wordsCreated: words.length,
+      wordsUpdated: 0,
+      wordsUnchanged: 0,
+      chapterLinksCreated: chapterLinks.length,
+      chapterLinksUpdated: 0,
+    }
+  })
+}
+
+export async function importVocabularyEntries(
+  entries,
+  { dryRun = false, initialSeed = false } = {},
+) {
   const validationErrors = validateVocabularyPayload(entries)
   if (validationErrors.length) {
     throw new Error(`Extracción inválida:\n${validationErrors.slice(0, 20).join('\n')}`)
   }
   if (dryRun) return buildDryRun(entries)
+  if (initialSeed) return importInitialVocabularySeed(entries)
 
   return Vocabulary.sequelize.transaction(async (transaction) => {
     const summary = {

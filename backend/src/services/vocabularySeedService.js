@@ -17,7 +17,9 @@ export async function ensureVocabularySeed() {
   }
 
   const seed = JSON.parse(await readFile(seedPath, 'utf8'))
-  const operation = await importVocabularyEntries(seed.entries)
+  const operation = await importVocabularyEntries(seed.entries, {
+    initialSeed: true,
+  })
   return {
     imported: true,
     vocabularyCount: seed.entries.length,
