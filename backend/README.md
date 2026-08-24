@@ -2,8 +2,8 @@
 
 > Para publicar la aplicación completa en Render, consulta
 > [`../DEPLOY_RENDER.md`](../DEPLOY_RENDER.md). El despliegue recomendado sirve el frontend y
-> la API desde un mismo servicio, protege el acceso con contraseña y conserva SQLite en un
-> disco persistente.
+> la API desde un mismo servicio, protege el acceso con contraseña y conserva los datos en
+> PostgreSQL externo.
 
 API en Express para generar y guardar ejercicios de latin. Por ahora usa ejercicios de prueba; la idea es que el mismo flujo pueda conectarse despues a una IA sin cambiar el contrato con el frontend.
 
@@ -22,7 +22,7 @@ El frontend le pide al backend un ejercicio con tres datos principales:
 La idea final es que esos datos se usen para construir un pedido claro a una IA:
 
 1. `topic`: indica el tema gramatical que debe practicar el estudiante.
-2. `vocabularyLevel`: indica el alcance de vocabulario de *Lingua Latina per se Illustrata: Familia Romana*.
+2. `vocabularyLevel`: indica el alcance de vocabulario de _Lingua Latina per se Illustrata: Familia Romana_.
 3. `exerciseType`: indica el formato del ejercicio, por ejemplo opcion multiple, completar o traduccion.
 
 Equivalencias de `vocabularyLevel`:
@@ -45,7 +45,7 @@ Frontend
   -> Service
   -> Ejercicio mock
   -> Repository
-  -> SQLite
+  -> SQLite local o PostgreSQL en producción
   -> Respuesta JSON al frontend
 ```
 
@@ -58,11 +58,11 @@ Frontend
   -> Service
   -> AI Exercise Service
   -> Repository
-  -> SQLite
+  -> SQLite local o PostgreSQL en producción
   -> Respuesta JSON al frontend
 ```
 
-`src/services/exerciseService.js` controla la validacion y el flujo general. La generacion real del contenido vive en `src/services/aiExerciseService.js`. Ese servicio recibe `topic`, `vocabularyLevel`, `exerciseType` y el alcance de vocabulario de *Lingua Latina*, llama a la IA si esta configurada, valida que la respuesta tenga el formato correcto y devuelve un ejercicio listo para guardar.
+`src/services/exerciseService.js` controla la validacion y el flujo general. La generacion real del contenido vive en `src/services/aiExerciseService.js`. Ese servicio recibe `topic`, `vocabularyLevel`, `exerciseType` y el alcance de vocabulario de _Lingua Latina_, llama a la IA si esta configurada, valida que la respuesta tenga el formato correcto y devuelve un ejercicio listo para guardar.
 
 Si no hay IA configurada, el backend usa ejercicios mock. Esto permite seguir desarrollando frontend, base de datos y rutas sin depender de una API key.
 
@@ -77,7 +77,7 @@ Frontend
   -> Usuario pega el JSON en la app
   -> POST /api/exercises/import
   -> Repository
-  -> SQLite
+  -> SQLite local o PostgreSQL en producción
 ```
 
 ## Arquitectura
@@ -104,7 +104,7 @@ Responsabilidades:
 - `services`: contiene la logica de negocio.
 - `repositories`: habla con los modelos y la base de datos.
 - `models`: define tablas Sequelize.
-- `database`: configura SQLite y sincronizacion.
+- `database`: configura SQLite local o PostgreSQL y sincronización.
 - `data`: datos temporales o catalogos internos.
 
 ## Configurar IA
@@ -115,12 +115,17 @@ Copiar `.env.example` a `.env` y ajustar los valores:
 PORT=3001
 CLIENT_ORIGIN=http://127.0.0.1:5173
 DATABASE_STORAGE=./data/app-latin.sqlite
+DATABASE_URL=
+DATABASE_SSL=true
 
 AI_PROVIDER=mock
 AI_MODEL=gpt-5.5
 OPENAI_API_KEY=
 AI_FALLBACK_TO_MOCK=true
 ```
+
+`DATABASE_URL` tiene prioridad cuando está definida. En Render debe contener la conexión
+PostgreSQL de Neon; en desarrollo puede dejarse vacía para continuar usando SQLite.
 
 Modo mock:
 
@@ -347,7 +352,7 @@ translation_es_la
 
 ## Vocabulario adaptativo de Familia Romana
 
-El vocabulario canónico se extrae del `INDEX VOCABVLORVM` de *Familia Romana*. La tabla
+El vocabulario canónico se extrae del `INDEX VOCABVLORVM` de _Familia Romana_. La tabla
 `vocabulary` conserva un registro por lema y `vocabulary_chapters` lo relaciona con todos
 los capítulos en los que aparece. Las traducciones españolas quedan vacías si no existe
 una fuente verificable y las lecturas dudosas de la capa de texto del PDF se registran en

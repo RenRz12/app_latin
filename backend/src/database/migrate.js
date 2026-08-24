@@ -1,5 +1,5 @@
 import { DataTypes, QueryTypes } from 'sequelize'
-import { sequelize } from './sequelize.js'
+import { databaseDialect, sequelize } from './sequelize.js'
 import '../models/index.js'
 import { VOCABULARY_CATALOG_FIXES } from '../data/vocabularyCatalogFixes.js'
 
@@ -10,13 +10,34 @@ const LEGACY_VOCABULARY_SYNC_MIGRATION =
 const VOCABULARY_CATALOG_FIXES_MIGRATION =
   '202608230001-vocabulary-catalog-fixes'
 
-async function ensureMigrationTable() {
-  await sequelize.query(`
-    CREATE TABLE IF NOT EXISTS schema_migrations (
-      name VARCHAR(255) PRIMARY KEY NOT NULL,
-      appliedAt DATETIME NOT NULL
-    )
-  `)
+function normalizedTableName(table) {
+  if (typeof table === 'string') return table
+  return table?.tableName || table?.name
+}
+
+async function ensureMigrationTable(queryInterface) {
+  const tables = await queryInterface.showAllTables()
+  if (tables.map(normalizedTableName).includes('schema_migrations')) return
+
+  await queryInterface.createTable('schema_migrations', {
+    name: {
+      type: DataTypes.STRING(255),
+      primaryKey: true,
+      allowNull: false,
+    },
+    appliedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+  })
+}
+
+async function recordMigration(queryInterface, name, transaction) {
+  await queryInterface.bulkInsert(
+    'schema_migrations',
+    [{ name, appliedAt: new Date() }],
+    { transaction },
+  )
 }
 
 async function migrationWasApplied(name) {
@@ -29,7 +50,7 @@ async function migrationWasApplied(name) {
 
 async function removeEmptyFailedBackup(queryInterface, transaction) {
   const tables = await queryInterface.showAllTables({ transaction })
-  if (!tables.includes('vocabulary_backup')) return
+  if (!tables.map(normalizedTableName).includes('vocabulary_backup')) return
 
   const [row] = await sequelize.query(
     'SELECT COUNT(*) AS count FROM vocabulary_backup',
@@ -48,8 +69,8 @@ async function removeEmptyFailedBackup(queryInterface, transaction) {
 
 export async function runDatabaseMigrations() {
   await sequelize.sync()
-  await ensureMigrationTable()
   const queryInterface = sequelize.getQueryInterface()
+  await ensureMigrationTable(queryInterface)
   let appliedAny = false
 
   if (!(await migrationWasApplied(ADAPTIVE_VOCABULARY_MIGRATION))) {
@@ -83,21 +104,16 @@ export async function runDatabaseMigrations() {
           { transaction },
         )
         await sequelize.query(
-          'UPDATE vocabulary_chapters SET createdAt = CURRENT_TIMESTAMP WHERE createdAt IS NULL',
+          'UPDATE vocabulary_chapters SET "createdAt" = CURRENT_TIMESTAMP WHERE "createdAt" IS NULL',
           { transaction },
         )
       }
 
       await removeEmptyFailedBackup(queryInterface, transaction)
-      await sequelize.query(
-        'INSERT INTO schema_migrations (name, appliedAt) VALUES (:name, :appliedAt)',
-        {
-          replacements: {
-            name: ADAPTIVE_VOCABULARY_MIGRATION,
-            appliedAt: new Date(),
-          },
-          transaction,
-        },
+      await recordMigration(
+        queryInterface,
+        ADAPTIVE_VOCABULARY_MIGRATION,
+        transaction,
       )
     })
     appliedAny = true
@@ -209,15 +225,10 @@ export async function runDatabaseMigrations() {
         }
       }
 
-      await sequelize.query(
-        'INSERT INTO schema_migrations (name, appliedAt) VALUES (:name, :appliedAt)',
-        {
-          replacements: {
-            name: ADAPTIVE_REVIEW_ENGINE_MIGRATION,
-            appliedAt: new Date(),
-          },
-          transaction,
-        },
+      await recordMigration(
+        queryInterface,
+        ADAPTIVE_REVIEW_ENGINE_MIGRATION,
+        transaction,
       )
     })
     appliedAny = true
@@ -259,15 +270,10 @@ export async function runDatabaseMigrations() {
         )
       }
 
-      await sequelize.query(
-        'INSERT INTO schema_migrations (name, appliedAt) VALUES (:name, :appliedAt)',
-        {
-          replacements: {
-            name: LEGACY_VOCABULARY_SYNC_MIGRATION,
-            appliedAt: new Date(),
-          },
-          transaction,
-        },
+      await recordMigration(
+        queryInterface,
+        LEGACY_VOCABULARY_SYNC_MIGRATION,
+        transaction,
       )
     })
     appliedAny = true
@@ -279,7 +285,7 @@ export async function runDatabaseMigrations() {
         const [legacyWord] = await sequelize.query(
           `SELECT id
            FROM vocabulary
-           WHERE normalizedLemma = :legacyNormalizedLemma
+           WHERE "normalizedLemma" = :legacyNormalizedLemma
            LIMIT 1`,
           {
             replacements: {
@@ -294,7 +300,7 @@ export async function runDatabaseMigrations() {
         const [canonicalWord] = await sequelize.query(
           `SELECT id
            FROM vocabulary
-           WHERE normalizedLemma = :normalizedLemma
+           WHERE "normalizedLemma" = :normalizedLemma
              AND id <> :legacyId
            LIMIT 1`,
           {
@@ -315,17 +321,17 @@ export async function runDatabaseMigrations() {
         await sequelize.query(
           `UPDATE vocabulary
            SET lemma = :lemma,
-               normalizedLemma = :normalizedLemma,
-               meaningEs = :meaningEs,
-               partOfSpeech = :partOfSpeech,
-               firstAppearanceChapter = :firstAppearanceChapter,
+               "normalizedLemma" = :normalizedLemma,
+               "meaningEs" = :meaningEs,
+               "partOfSpeech" = :partOfSpeech,
+               "firstAppearanceChapter" = :firstAppearanceChapter,
                nominative = :nominative,
                genitive = :genitive,
                gender = :gender,
-               principalParts = :principalParts,
-               morphologyData = :morphologyData,
-               importStatus = 'VERIFIED',
-               updatedAt = :updatedAt
+               "principalParts" = :principalParts,
+               "morphologyData" = :morphologyData,
+               "importStatus" = 'VERIFIED',
+               "updatedAt" = :updatedAt
            WHERE id = :id`,
           {
             replacements: {
@@ -343,8 +349,8 @@ export async function runDatabaseMigrations() {
         await sequelize.query(
           `UPDATE vocabulary_chapters
            SET chapter = :chapter,
-               firstOccurrenceLine = :firstOccurrenceLine
-           WHERE vocabularyId = :vocabularyId`,
+               "firstOccurrenceLine" = :firstOccurrenceLine
+           WHERE "vocabularyId" = :vocabularyId`,
           {
             replacements: {
               vocabularyId: legacyWord.id,
@@ -356,20 +362,17 @@ export async function runDatabaseMigrations() {
         )
       }
 
-      await sequelize.query(
-        'INSERT INTO schema_migrations (name, appliedAt) VALUES (:name, :appliedAt)',
-        {
-          replacements: {
-            name: VOCABULARY_CATALOG_FIXES_MIGRATION,
-            appliedAt: new Date(),
-          },
-          transaction,
-        },
+      await recordMigration(
+        queryInterface,
+        VOCABULARY_CATALOG_FIXES_MIGRATION,
+        transaction,
       )
     })
     appliedAny = true
   }
 
-  await sequelize.query('PRAGMA optimize')
+  if (databaseDialect === 'sqlite') {
+    await sequelize.query('PRAGMA optimize')
+  }
   return appliedAny
 }

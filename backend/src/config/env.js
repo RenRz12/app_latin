@@ -2,6 +2,11 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
+function booleanFromEnvironment(value, defaultValue) {
+  if (value === undefined || value === '') return defaultValue
+  return value.toLowerCase() === 'true'
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   isRender: process.env.RENDER === 'true',
@@ -9,7 +14,9 @@ export const env = {
   clientOrigins: process.env.CLIENT_ORIGIN
     ? process.env.CLIENT_ORIGIN.split(',').map((origin) => origin.trim())
     : [],
+  databaseUrl: process.env.DATABASE_URL?.trim() || '',
   databaseStorage: process.env.DATABASE_STORAGE || './data/app-latin.sqlite',
+  databaseSsl: booleanFromEnvironment(process.env.DATABASE_SSL, true),
   aiProvider: process.env.AI_PROVIDER || 'mock',
   aiModel: process.env.AI_MODEL || 'gpt-5.5',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
@@ -20,6 +27,20 @@ export const env = {
 }
 
 export function validateRuntimeEnvironment() {
+  if (
+    env.databaseUrl &&
+    !env.databaseUrl.startsWith('postgres://') &&
+    !env.databaseUrl.startsWith('postgresql://')
+  ) {
+    throw new Error('DATABASE_URL debe ser una URL válida de PostgreSQL.')
+  }
+
+  if (env.isRender && !env.databaseUrl) {
+    throw new Error(
+      'DATABASE_URL es obligatoria en Render para conservar los datos en PostgreSQL.',
+    )
+  }
+
   if (!env.appPassword && !env.isRender) return
 
   if (env.appPassword.length < 10) {

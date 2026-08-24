@@ -2,15 +2,17 @@ services:
   - type: web
     name: app-latin
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm run render-build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: 24.14.1
-      - key: DATABASE_STORAGE
-        value: /var/data/app-latin.sqlite
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: true
       - key: APP_PASSWORD
         sync: false
       - key: SESSION_SECRET
@@ -23,7 +25,3 @@ services:
         value: gpt-5.5
       - key: AI_FALLBACK_TO_MOCK
         value: true
-    disk:
-      name: app-latin-data
-      mountPath: /var/data
-      sizeGB: 1

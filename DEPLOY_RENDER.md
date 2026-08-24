@@ -1,25 +1,32 @@
 # Publicar App Latin en Render
 
-La aplicación se despliega como un único servicio web de Node. Express sirve tanto la API
-como el frontend compilado, y SQLite queda dentro de un disco persistente de Render.
+La aplicación se despliega como un servicio web gratuito de Node. Express sirve tanto la API
+como el frontend compilado y los datos se guardan en una base PostgreSQL externa de Neon.
 
-## Por qué esta configuración usa un servicio pago
+## Por qué PostgreSQL está separado de Render
 
-Render no admite discos persistentes en servicios gratuitos. Sin el disco, el historial,
-el progreso y la configuración se perderían al reiniciar o volver a desplegar la aplicación.
-El archivo `render.yaml` usa el plan `starter` y un disco de 1 GB, suficiente para esta
-aplicación personal. No se necesita PostgreSQL mientras exista un único usuario y una sola
-instancia del servidor.
+Render no admite discos persistentes en servicios web gratuitos y su PostgreSQL gratuito
+vence a los 30 días. Neon ofrece PostgreSQL persistente sin ese vencimiento. Por eso
+`render.yaml` mantiene la aplicación en el plan `free` y recibe la conexión mediante
+`DATABASE_URL`.
+
+## Crear la base gratuita en Neon
+
+1. Crea una cuenta en [Neon](https://console.neon.tech/) y un proyecto nuevo.
+2. Elige una región cercana a la de tu servicio de Render.
+3. En **Connect**, copia la cadena de conexión agrupada (_pooled connection string_).
+4. Conserva esa cadena como un secreto. No la escribas en Git ni en ningún archivo público.
 
 ## Primer despliegue
 
 1. Sube este repositorio a GitHub, GitLab o Bitbucket. No subas `backend/.env` ni los archivos
    de `backend/data/`: pueden contener claves y datos personales.
 2. En Render elige **New > Blueprint** y conecta el repositorio.
-3. Render leerá `render.yaml` y mostrará el servicio `app-latin` con su disco.
-4. Cuando solicite `APP_PASSWORD`, escribe una contraseña privada de al menos 10 caracteres.
+3. Render leerá `render.yaml` y mostrará el servicio gratuito `app-latin`.
+4. Cuando solicite `DATABASE_URL`, pega la cadena de conexión de Neon completa.
+5. Cuando solicite `APP_PASSWORD`, escribe una contraseña privada de al menos 10 caracteres.
    `SESSION_SECRET` se genera automáticamente y no debes compartirlo.
-5. Aplica el Blueprint y espera a que `/api/health` indique que el servicio está disponible.
+6. Aplica el Blueprint y espera a que `/api/health` indique que el servicio está disponible.
 
 Si creaste el servicio manualmente en vez de usar **New > Blueprint**, revisa estos valores
 en **Settings > Build & Deploy**:
@@ -36,24 +43,31 @@ Health Check Path: /api/health
 No configures `frontend` ni `backend` como Root Directory: el despliegue necesita ambos y
 los comandos se ejecutan desde la raíz del repositorio.
 
+Si el servicio ya existe, agrega manualmente en **Environment**:
+
+```text
+DATABASE_URL=<cadena copiada desde Neon>
+DATABASE_SSL=true
+```
+
+Elimina `DATABASE_STORAGE` si estaba configurada. Guarda los cambios y vuelve a desplegar.
+
 La primera ejecución crea la base y carga automáticamente las 1.729 entradas de vocabulario
 incluidas en `backend/seed/familia-romana-vocabulary.json`.
 
-## Historial local existente
+## Datos existentes en SQLite
 
 La base `backend/data/app-latin.sqlite` está excluida de Git deliberadamente porque contiene
-tu historial personal. Por eso, un despliegue nuevo empieza sin estadísticas ni prácticas
-anteriores. Si quieres trasladarlas, conserva ese archivo y realiza una transferencia única
-al disco de Render siguiendo la guía oficial de transferencia de archivos a discos. Hazlo
-antes de empezar a usar la versión publicada y configura `DATABASE_STORAGE` para apuntar al
-archivo transferido dentro de `/var/data`.
+tu historial personal. Un PostgreSQL nuevo empieza sin estadísticas ni prácticas anteriores,
+aunque carga automáticamente el catálogo de vocabulario. No borres el archivo SQLite: puede
+usarse para una transferencia única antes de comenzar a guardar actividad en Neon.
 
 ## Uso diario
 
 - Abre la dirección `https://<tu-servicio>.onrender.com` desde cualquier dispositivo.
 - Ingresa `APP_PASSWORD`. La sesión dura 30 días en ese navegador.
 - El botón **Salir** cierra la sesión del dispositivo actual.
-- Los cambios enviados a la rama conectada se despliegan nuevamente sin borrar el disco.
+- Los despliegues, reinicios y accesos desde otros dispositivos utilizan la misma base Neon.
 
 ## Variables opcionales para generación directa con IA
 
@@ -63,6 +77,8 @@ escribas la clave en `render.yaml` ni la subas al repositorio.
 
 ## Desarrollo local
 
-En local `APP_PASSWORD` puede quedar vacío; en ese caso no aparece la pantalla de acceso.
-Para probarla, define `APP_PASSWORD` y `SESSION_SECRET` en `backend/.env`. Vite redirige
-automáticamente `/api` al backend de `http://localhost:3001`.
+En local, si no defines `DATABASE_URL`, la aplicación continúa usando
+`backend/data/app-latin.sqlite`. `APP_PASSWORD` puede quedar vacío; en ese caso no aparece la
+pantalla de acceso. Para probar PostgreSQL localmente, define `DATABASE_URL` y
+`DATABASE_SSL=false`. Vite redirige automáticamente `/api` al backend de
+`http://localhost:3001`.
