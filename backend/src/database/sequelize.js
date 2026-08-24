@@ -19,6 +19,21 @@ if (!usePostgres && storagePath !== ':memory:') {
 
 export const databaseDialect = usePostgres ? 'postgres' : 'sqlite'
 
+if (usePostgres) {
+  const databaseUrl = new URL(env.databaseUrl)
+  const password = decodeURIComponent(databaseUrl.password)
+
+  console.log('Configuración PostgreSQL recibida.', {
+    host: databaseUrl.hostname,
+    database: databaseUrl.pathname.replace(/^\//, ''),
+    user: decodeURIComponent(databaseUrl.username),
+    passwordLength: password.length,
+    passwordMasked: /^[*•]+$/.test(password),
+    pooled: databaseUrl.hostname.includes('-pooler.'),
+    urlLength: env.databaseUrl.length,
+  })
+}
+
 export const sequelize = usePostgres
   ? new Sequelize(env.databaseUrl, {
       dialect: 'postgres',
